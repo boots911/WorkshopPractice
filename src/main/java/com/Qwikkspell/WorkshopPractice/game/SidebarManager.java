@@ -44,9 +44,8 @@ public class SidebarManager {
         objective.getScore("  ").setScore(6);
         objective.getScore(ChatColor.AQUA + player.getName() + ChatColor.WHITE + ": " + ChatColor.GREEN + craftNumber).setScore(5);
 
-        // Add personal best time
-        String pbTime = gameManager.getScoreManager().getFormattedTopGameScore(player);
-        objective.getScore(ChatColor.GOLD + "PB: " + ChatColor.YELLOW + pbTime).setScore(4);
+        // Per-mode personal best (or a practice label for seeded runs)
+        objective.getScore(pbLine(player)).setScore(4);
 
         objective.getScore("   ").setScore(3);
         objective.getScore(ChatColor.YELLOW + "Workshop Practice").setScore(2);
@@ -68,15 +67,38 @@ public class SidebarManager {
         objective.getScore("  ").setScore(6);
         objective.getScore(ChatColor.AQUA + player.getName()).setScore(5);
 
-        // Add personal best time
-        String pbTime = gameManager.getScoreManager().getFormattedTopGameScore(player);
-        objective.getScore(ChatColor.GOLD + "PB: " + ChatColor.YELLOW + pbTime).setScore(4);
+        // Personal best (Left shown as the representative board when idle)
+        objective.getScore(pbLine(player)).setScore(4);
 
         objective.getScore("   ").setScore(3);
         objective.getScore(ChatColor.YELLOW + "Workshop Practice").setScore(2);
 
         // Apply the scoreboard to the player
         player.setScoreboard(board);
+    }
+
+    /** Personal-best sidebar line for the player's current mode, or a seeded-run label. */
+    private String pbLine(Player player) {
+        Game game = gameManager.getActiveGame(player);
+        StatsManager stats = gameManager.getStatsManager();
+
+        if (game != null && game.isSeeded()) {
+            return ChatColor.LIGHT_PURPLE + "Practice / Seeded";
+        }
+
+        GameMode mode = (game != null) ? game.getMode() : GameMode.LEFT;
+        double pb = stats.getModePB(player, mode);
+        String pbStr;
+        if (pb < 0) {
+            pbStr = "None";
+        } else if (mode.getScoringType() == GameMode.ScoringType.MOST_CRAFTS) {
+            pbStr = ((int) pb) + " crafts";
+        } else {
+            pbStr = stats.formatTime(pb);
+        }
+
+        String prefix = (game == null) ? "PB (Left): " : "PB: ";
+        return ChatColor.GOLD + prefix + ChatColor.YELLOW + pbStr;
     }
 
     private Scoreboard getOrCreateScoreboard(Player player) {

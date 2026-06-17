@@ -3,3 +3,7 @@ anchor:
   x: -1849
   y: 39
   z: 759
+
+# Default pre-game countdown (seconds) for players who haven't set their own
+# with /pregamecountdown. Clamped to 0-10.
+defaultPregameCountdown: 6

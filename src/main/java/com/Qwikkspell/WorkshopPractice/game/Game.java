@@ -13,25 +13,29 @@ import org.bukkit.potion.PotionEffect;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.scheduler.BukkitTask;
 
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Random;
 import java.util.Set;
 
 public class Game {
     WorkshopPractice plugin;
     private final Player player;
     private final List<Material> crafts;
-    private final String difficulty;
+    private final GameMode mode;
+    private final long seed;
+    private final boolean seeded;
     private final String foreman;
     private int currentCraft;
-    private int finalCraftIndex;
+    private final int finalCraftIndex;
     private long remainingTime;
     private boolean isWaiting;
     private GameStatus status;
-    private CraftStation station;
+    private final CraftStation station;
     private final GameManager gameManager;
-    private BossBar bossBar;
-    private SidebarManager sidebarManager;
+    private final BossBar bossBar;
+    private final SidebarManager sidebarManager;
     private BukkitTask pregameTask;
     private BukkitRunnable gameTask;
     private int countdown;
@@ -39,16 +43,21 @@ public class Game {
     private long endTime;
     private long craftStart;
     private long craftEnd;
+    private int timeTrialCrafts;
+    private final List<StatsManager.CraftRecord> completedCrafts = new ArrayList<>();
     private final Set<Location> accessedBlocks = new HashSet<>();
     private final int waitTime;
 
-    public Game(Player player, List<Material> crafts, String difficulty, long gameDuration, CraftStation station,
-                GameManager gameManager, WorkshopPractice plugin, SidebarManager sidebarManager, String foreman, int waitTime) {
+    public Game(Player player, List<Material> crafts, GameMode mode, long seed, boolean seeded,
+                CraftStation station, GameManager gameManager, WorkshopPractice plugin,
+                SidebarManager sidebarManager, String foreman, int waitTime) {
         this.player = player;
         this.crafts = crafts;
-        this.difficulty = difficulty;
+        this.mode = mode;
+        this.seed = seed;
+        this.seeded = seeded;
         this.currentCraft = 0;
-        this.remainingTime = gameDuration;
+        this.remainingTime = mode.getTimeLimitSeconds(); // 0 for no-limit modes (All Crafts)
         this.status = GameStatus.WAITING;
         this.isWaiting = false;
         this.station = station;
@@ -66,7 +75,7 @@ public class Game {
     public void start() {
         getStation().setOccupied(true);
         this.status = GameStatus.PREGAME;
-        player.setGameMode(GameMode.SURVIVAL);
+        player.setGameMode(org.bukkit.GameMode.SURVIVAL);
         getStation().clearStation();
         player.getInventory().clear();
         pregame();
@@ -84,7 +93,7 @@ public class Game {
                 countdown--;
                 bossBar.setTitle(ChatColor.YELLOW + "" + ChatColor.BOLD + "Workshop starts in " + ChatColor.RED + "" + ChatColor.BOLD
                         + countdown + ChatColor.YELLOW + "" + ChatColor.BOLD + " seconds!");
-                bossBar.setProgress(countdown / 10.0);
+                bossBar.setProgress(clampProgress(countdown / 10.0));
 
             if (countdown <= 4) {
                 player.playSound(player.getLocation(), Sound.BLOCK_NOTE_BLOCK_HAT, 1.0f, 1.0f);
@@ -124,18 +133,26 @@ public class Game {
        gameTask = new BukkitRunnable() {
             @Override
             public void run() {
-                if (remainingTime <= 0) {
-                    end();
-                    cancel();
-                    return;
+                if (mode.hasTimeLimit()) {
+                    if (remainingTime <= 0) {
+                        if (mode.getScoringType() == GameMode.ScoringType.MOST_CRAFTS) {
+                            finishTimeTrial();
+                        } else {
+                            end(); // ran out of time without finishing — no score recorded
+                        }
+                        cancel();
+                        return;
+                    }
+                    remainingTime--;
                 }
-                remainingTime--;
-                if (remainingTime <= 149) {
-                    updateBossBar();
-                    bossBar.setVisible(true);
-                }
+                updateBossBar();
+                bossBar.setVisible(true);
                 if (!getStation().isPlayerInside(player)) {
-                    end();
+                    if (mode.getScoringType() == GameMode.ScoringType.MOST_CRAFTS) {
+                        finishTimeTrial(); // leaving banks the crafts done so far
+                    } else {
+                        end();             // leaving abandons a timed run
+                    }
                 }
             }
         };
@@ -146,52 +163,114 @@ public class Game {
         if (isPlayerWaiting() || getStatus() != GameStatus.IN_PROGRESS) {
             return;
         }
-        Material currentCraft = getCurrentCraft();
+        Material currentCraftMaterial = getCurrentCraft();
+        boolean hasCraft = player.getInventory().contains(currentCraftMaterial) || isPlayerWearing();
+        if (!hasCraft) {
+            sendFailureMessage(player, currentCraftMaterial);
+            return;
+        }
+
+        craftEnd = System.nanoTime();
+        recordCraftTime(currentCraftMaterial);
+        setPlayerWaiting(true);
+        sendSuccessMessage(player);
+        showHeartParticles();
+
+        if (mode.getScoringType() == GameMode.ScoringType.MOST_CRAFTS) {
+            timeTrialCrafts++;
+            new BukkitRunnable() {
+                @Override
+                public void run() {
+                    if (getStatus() != GameStatus.IN_PROGRESS) {
+                        return;
+                    }
+                    if (currentCraft + 1 >= crafts.size()) {
+                        finishTimeTrial(); // exhausted the (very long) seeded supply
+                        return;
+                    }
+                    giveNextCraft();
+                    setPlayerWaiting(false);
+                }
+            }.runTaskLater(plugin, 20L);
+            return;
+        }
 
         if (getCurrentCraftIndex() < finalCraftIndex) {
-            if (player.getInventory().contains(currentCraft) || isPlayerWearing()) {
-                craftEnd = System.nanoTime();
-                setPlayerWaiting(true);
-                sendSuccessMessage(player);
-                showHeartParticles();
-                new BukkitRunnable() {
-                    @Override
-                    public void run() {
-                        giveNextCraft();
-                        setPlayerWaiting(false);
-                    }
-                }.runTaskLater(plugin, 20L);
-            } else {
-                sendFailureMessage(player, getCurrentCraft());
-            }
+            new BukkitRunnable() {
+                @Override
+                public void run() {
+                    giveNextCraft();
+                    setPlayerWaiting(false);
+                }
+            }.runTaskLater(plugin, 20L);
+        } else {
+            this.currentCraft++;
+            finish(player);
         }
+    }
 
-        if (getCurrentCraftIndex() >= finalCraftIndex) {
-            if (player.getInventory().contains(currentCraft)) {
-                craftEnd = System.nanoTime();
-                setPlayerWaiting(true);
-                sendSuccessMessage(player);
-                showHeartParticles();
-                this.currentCraft++;
-
-                finish(player);
-            }
-            else {
-                sendFailureMessage(player, getCurrentCraft());
-            }
-        }
-
+    private void recordCraftTime(Material material) {
+        double craftSeconds = (craftEnd - craftStart) / 1_000_000_000.0;
+        completedCrafts.add(new StatsManager.CraftRecord(material, craftSeconds));
     }
 
     private void finish(Player player) {
+        if (status != GameStatus.IN_PROGRESS) {
+            return;
+        }
         endTime = System.nanoTime();
-        String message = ChatColor.AQUA + player.getName() + ChatColor.YELLOW + " has completed the items needed to craft! " +
-                getGameCraftTimeString();
-        Bukkit.broadcastMessage(message);
-        double gameTime = (double) (endTime - startTime) / 1_000_000_000L; // Convert to seconds
-        gameManager.getScoreManager().updateTopScore(player, gameTime);
-        end();
+        double gameTime = (endTime - startTime) / 1_000_000_000.0;
+        StatsManager stats = gameManager.getStatsManager();
+        String timeStr = stats.formatTime(gameTime);
 
+        if (seeded) {
+            stats.recordSeedResult(mode, seed, player, gameTime);
+            player.sendMessage(ChatColor.GOLD + "" + ChatColor.BOLD + "Practice / Seeded Run "
+                    + ChatColor.GRAY + "(" + mode.getDisplayName() + ", seed " + seed + ")");
+            player.sendMessage(ChatColor.YELLOW + "Completed in " + ChatColor.AQUA + timeStr);
+        } else {
+            boolean newPB = stats.recordCompletion(player, mode, gameTime, completedCrafts);
+            player.sendMessage(ChatColor.AQUA + player.getName() + ChatColor.YELLOW + " completed "
+                    + mode.getDisplayName() + "! " + ChatColor.AQUA + "(" + timeStr + ")");
+            if (newPB) {
+                broadcastPersonalBest(mode.getDisplayName() + " PB", timeStr);
+            }
+        }
+        sendSeedReplayMessage();
+        end();
+    }
+
+    private void finishTimeTrial() {
+        if (status != GameStatus.IN_PROGRESS) {
+            return;
+        }
+        endTime = System.nanoTime();
+        int count = timeTrialCrafts;
+        StatsManager stats = gameManager.getStatsManager();
+
+        if (seeded) {
+            stats.recordSeedResult(mode, seed, player, count);
+            player.sendMessage(ChatColor.GOLD + "" + ChatColor.BOLD + "Practice / Seeded Run "
+                    + ChatColor.GRAY + "(" + mode.getDisplayName() + ", seed " + seed + ")");
+            player.sendMessage(ChatColor.YELLOW + "Time's up! Crafts completed: " + ChatColor.AQUA + count);
+        } else {
+            boolean newBest = stats.recordTimeTrial(player, mode, count, completedCrafts);
+            player.sendMessage(ChatColor.YELLOW + "Time's up! Crafts completed: " + ChatColor.AQUA + count);
+            if (newBest) {
+                broadcastPersonalBest(mode.getDisplayName() + " PB", count + " crafts");
+            }
+        }
+        sendSeedReplayMessage();
+        end();
+    }
+
+    private void broadcastPersonalBest(String label, String value) {
+        String message = ChatColor.GOLD + "" + ChatColor.BOLD + "NEW " + label + "! " + ChatColor.YELLOW + value
+                + ChatColor.GRAY + " by " + ChatColor.AQUA + player.getName();
+        Bukkit.broadcastMessage(message);
+        for (Player onlinePlayer : Bukkit.getOnlinePlayers()) {
+            onlinePlayer.playSound(onlinePlayer.getLocation(), Sound.ENTITY_FIREWORK_ROCKET_LAUNCH, 1.0f, 1.0f);
+        }
     }
 
     public void end() {
@@ -227,9 +306,44 @@ public class Game {
     }
 
     private void updateBossBar() {
-        double progress = (double) remainingTime / 150L; // Assuming game duration is 200 ticks
-        bossBar.setTitle(ChatColor.GOLD + "" + ChatColor.BOLD + "Crafting time: " + ChatColor.RED + "" + ChatColor.BOLD + remainingTime);
-        bossBar.setProgress(progress);
+        if (mode.hasTimeLimit()) {
+            double progress = clampProgress((double) remainingTime / mode.getTimeLimitSeconds());
+            if (mode.getScoringType() == GameMode.ScoringType.MOST_CRAFTS) {
+                bossBar.setTitle(ChatColor.GOLD + "" + ChatColor.BOLD + "Time left: " + ChatColor.RED + remainingTime
+                        + ChatColor.GOLD + "   Crafts: " + ChatColor.GREEN + timeTrialCrafts + seedSuffix());
+            } else {
+                bossBar.setTitle(ChatColor.GOLD + "" + ChatColor.BOLD + "Crafting time: " + ChatColor.RED + "" + ChatColor.BOLD + remainingTime + seedSuffix());
+            }
+            bossBar.setProgress(progress);
+        } else {
+            // No time limit (All Crafts): show elapsed time and progress through the craft list.
+            long elapsed = (System.nanoTime() - startTime) / 1_000_000_000L;
+            int total = crafts.size();
+            bossBar.setTitle(ChatColor.GOLD + "" + ChatColor.BOLD + mode.getDisplayName() + ": " + ChatColor.GREEN
+                    + Math.min(currentCraft + 1, total) + "/" + total + ChatColor.GOLD + "   " + formatClock(elapsed) + seedSuffix());
+            bossBar.setProgress(clampProgress((double) currentCraft / total));
+        }
+    }
+
+    /** Seed label appended to the boss bar so players always see which run they're on. */
+    private String seedSuffix() {
+        return ChatColor.GRAY + "   Seed: " + ChatColor.WHITE + seed;
+    }
+
+    /** Client-side message telling the player how to replay the run they just played. */
+    private void sendSeedReplayMessage() {
+        player.sendMessage(ChatColor.GRAY + "Seed: " + ChatColor.WHITE + seed + ChatColor.GRAY + " — replay with "
+                + ChatColor.YELLOW + "/play " + mode.getAlias() + " seed " + seed);
+    }
+
+    private static double clampProgress(double value) {
+        return Math.max(0.0, Math.min(1.0, value));
+    }
+
+    private static String formatClock(long totalSeconds) {
+        long minutes = totalSeconds / 60;
+        long seconds = totalSeconds % 60;
+        return String.format("%d:%02d", minutes, seconds);
     }
 
     public Material getCurrentCraft() {
@@ -238,6 +352,11 @@ public class Game {
 
     public int getCurrentCraftIndex() {
         return currentCraft;
+    }
+
+    /** Deterministic per-craft RNG so a (seed, craftIndex) reproduces the same wall layout. */
+    public Random getLayoutRandom() {
+        return CraftSequence.layoutRandom(seed, currentCraft);
     }
 
 
@@ -272,8 +391,20 @@ public class Game {
         return station;
     }
 
+    public GameMode getMode() {
+        return mode;
+    }
+
+    public boolean isSeeded() {
+        return seeded;
+    }
+
+    public long getSeed() {
+        return seed;
+    }
+
     public String getDifficulty() {
-        return difficulty;
+        return mode.getDifficulty();
     }
 
     public String getForeman() {
@@ -339,4 +470,3 @@ public class Game {
 
 
 }
-

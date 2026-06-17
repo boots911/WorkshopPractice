@@ -1,6 +1,7 @@
 package com.Qwikkspell.WorkshopPractice.game;
 
 import com.Qwikkspell.WorkshopPractice.WorkshopPractice;
+import com.Qwikkspell.WorkshopPractice.player.PlayerSettingsManager;
 import com.Qwikkspell.WorkshopPractice.utils.ConfigUtils;
 import org.bukkit.*;
 import org.bukkit.block.Block;
@@ -13,13 +14,17 @@ import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.scheduler.BukkitTask;
 
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class GameManager {
     public final WorkshopPractice plugin;
-    private final Map<Player, Game> activeGames = new HashMap<>();
+    private final Map<Player, Game> activeGames = new ConcurrentHashMap<>();
     private final List<CraftStation> craftStations = new ArrayList<>();
     private SidebarManager sidebarManager;
     private final ScoreManager scoreManager;
+    private final StatsManager statsManager;
+    private final PlayerSettingsManager settingsManager;
+    private List<Material> allCraftMaterials;
     private BukkitTask furnaceCheckTask;
     private final List<String> crafts = Arrays.asList(
             "PISTON", "ENCHANTING_TABLE", "COAL_BLOCK", "DIAMOND_BLOCK", "IRON_BLOCK",
@@ -32,7 +37,7 @@ public class GameManager {
             "GOLDEN_CHESTPLATE", "GOLDEN_LEGGINGS", "GOLDEN_BOOTS", "GOLDEN_HELMET",
             "ARMOR_STAND", "MINECART", "FISHING_ROD", "BOW", "SHEARS", "RAIL",
             "FURNACE", "COMPASS", "OAK_SIGN", "OAK_FENCE", "OAK_FENCE_GATE", "CAULDRON", "REDSTONE_TORCH",
-            "CHEST", "LAPIS_BLOCK", "WOODEN_PICKAXE", "GOLDEN_PICKAXE", "STONE_PICKAXE", "IRON_PICKAXE", "DIAMOND_PICKAXE"
+            "CHEST", "LAPIS_BLOCK", "REDSTONE_BLOCK", "WOODEN_PICKAXE", "GOLDEN_PICKAXE", "STONE_PICKAXE", "IRON_PICKAXE", "DIAMOND_PICKAXE"
 
     );
     private final List<Material> randomBlocks = Arrays.asList(
@@ -42,17 +47,40 @@ public class GameManager {
 
     public GameManager(WorkshopPractice plugin) {
         this.plugin = plugin;
-        this.sidebarManager = sidebarManager;
         this.scoreManager = new ScoreManager(plugin);
+        this.statsManager = new StatsManager(plugin);
+        // Legacy scores.yml times are all Left Easy runs — fold them into the lefteasy board.
+        this.statsManager.importLegacyScores(this.scoreManager.getLegacyScores());
+        this.settingsManager = new PlayerSettingsManager(plugin);
+        buildCraftMaterials();
         loadCraftStations();
     }
 
-    public void startGame(Player player, String side, String difficulty, int waitTime) {
-        if (activeGames.containsKey(player)) {
-            activeGames.get(player).end();
+    private void buildCraftMaterials() {
+        List<Material> materials = new ArrayList<>();
+        for (String name : crafts) {
+            Material material = Material.matchMaterial(name);
+            if (material != null) {
+                materials.add(material);
+            } else {
+                plugin.getLogger().warning("Unknown craft material in list: " + name);
+            }
         }
-        String direction = side.equals("left") ? "NORTH" : "SOUTH";
-        CraftStation station = findCraftStation(direction);
+        this.allCraftMaterials = Collections.unmodifiableList(materials);
+    }
+
+    public void startGame(Player player, GameMode mode, Long seed) {
+        Game existing = activeGames.get(player);
+        if (existing != null) {
+            existing.end();
+        }
+
+        long actualSeed = (seed != null) ? seed : CraftSequence.randomSeed();
+        boolean isSeeded = seed != null;
+
+        CraftStation station = mode.isAnyDirection()
+                ? findAnyCraftStation()
+                : findCraftStation(mode.getDirection().station());
 
         if (station == null) {
             player.sendMessage("We couldn't find you a game, try again later.");
@@ -60,14 +88,16 @@ public class GameManager {
             return;
         }
         station.setOccupied(true);
-        plugin.getLogger().info("Player " + player.getName() + " assigned to station " + station.getId());
+        plugin.getLogger().info("Player " + player.getName() + " assigned to station " + station.getId()
+                + " mode=" + mode.getAlias() + " seed=" + actualSeed + (isSeeded ? " (seeded)" : ""));
 
-
-        List<Material> crafts = findItems(5);
+        List<Material> runCrafts = CraftSequence.generate(allCraftMaterials, mode, actualSeed);
 
         String foreman = InfoMaps.getRandomForemanName();
+        int waitTime = settingsManager.getPregameCountdown(player.getUniqueId());
 
-        Game game = new Game(player, crafts, difficulty, 150L, station, this, this.plugin, sidebarManager, foreman, waitTime);
+        Game game = new Game(player, runCrafts, mode, actualSeed, isSeeded, station, this, this.plugin,
+                sidebarManager, foreman, waitTime);
         activeGames.put(player, game);
         game.start();
 
@@ -94,7 +124,8 @@ public class GameManager {
                     new ArrayList<>(station.getCombinedLeftSide()) : new ArrayList<>(station.getCombinedRightSide());
         }
 
-        Collections.shuffle(sideBlocks);
+        Random rng = game.getLayoutRandom();
+        Collections.shuffle(sideBlocks, rng);
 
         for (int i = 0; i < requiredMaterials.size(); i++) {
             Location loc = sideBlocks.get(i);
@@ -102,11 +133,8 @@ public class GameManager {
             otherBlocks.remove(loc);
         }
 
-        placeRandomBlocks(otherBlocks);
-
-        Random random = new Random();
         for (Location location : otherBlocks) {
-            location.getBlock().setType(randomBlocks.get(random.nextInt(randomBlocks.size())));
+            location.getBlock().setType(randomBlocks.get(rng.nextInt(randomBlocks.size())));
         }
 
         List<Location> craftGrid = station.getCraftGrid();
@@ -233,22 +261,19 @@ public class GameManager {
         }
     }
 
-    public List<Material> findItems(int count) {
-        Collections.shuffle(crafts);
-        List<Material> items = new ArrayList<>();
-        for (int i = 0; i < count; i++) {
-            Material material = Material.getMaterial(crafts.get(i).toUpperCase());
-            if (material != null) {
-                items.add(material);
-                plugin.getLogger().warning(material.toString());
-            }
-        }
-        return items;
-    }
-
     public synchronized CraftStation findCraftStation(String direction) {
         for (CraftStation c : craftStations) {
             if (!c.isOccupied() && c.getDirection().equalsIgnoreCase(direction)) {
+                return c;
+            }
+        }
+        return null;
+    }
+
+    /** Any free station regardless of direction — used by direction-agnostic modes (All Crafts, Time Trial). */
+    public synchronized CraftStation findAnyCraftStation() {
+        for (CraftStation c : craftStations) {
+            if (!c.isOccupied()) {
                 return c;
             }
         }
@@ -304,6 +329,14 @@ public class GameManager {
 
     public ScoreManager getScoreManager() {
         return scoreManager;
+    }
+
+    public StatsManager getStatsManager() {
+        return statsManager;
+    }
+
+    public PlayerSettingsManager getSettingsManager() {
+        return settingsManager;
     }
 
 

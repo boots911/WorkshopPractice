@@ -107,4 +107,13 @@ public class ScoreManager {
                 .limit(limit)
                 .collect(Collectors.toList());
     }
+
+    /**
+     * Read-only view of the legacy {@code scores.yml} data (UUID -> best total time). Preserved
+     * so the owner can later merge these ~150 historical records into the {@code lefteasy} board.
+     * The new game path writes to {@link StatsManager}, never here, so this data is never mutated.
+     */
+    public Map<UUID, Double> getLegacyScores() {
+        return Collections.unmodifiableMap(topGameScores);
+    }
 }

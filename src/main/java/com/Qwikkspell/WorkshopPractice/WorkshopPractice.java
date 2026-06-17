@@ -1,9 +1,11 @@
 package com.Qwikkspell.WorkshopPractice;
 
 import com.Qwikkspell.WorkshopPractice.commands.LeaderboardCommand;
+import com.Qwikkspell.WorkshopPractice.commands.LeaveCommand;
 import com.Qwikkspell.WorkshopPractice.commands.PlayCommand;
+import com.Qwikkspell.WorkshopPractice.commands.PlayHelpCommand;
+import com.Qwikkspell.WorkshopPractice.commands.PregameCountdownCommand;
 import com.Qwikkspell.WorkshopPractice.game.GameManager;
-import com.Qwikkspell.WorkshopPractice.game.ScoreManager;
 import com.Qwikkspell.WorkshopPractice.game.SidebarManager;
 import com.Qwikkspell.WorkshopPractice.listeners.*;
 import org.bukkit.entity.Player;
@@ -11,12 +13,12 @@ import org.bukkit.plugin.java.JavaPlugin;
 
 public final class WorkshopPractice extends JavaPlugin {
     private SidebarManager sidebarManager;
-    private ScoreManager scoreManager;
+    private GameManager gameManager;
+
     @Override
     public void onEnable() {
         this.saveDefaultConfig();
-        GameManager gameManager = new GameManager(this);
-       // scoreManager = new ScoreManager(this);
+        gameManager = new GameManager(this);
         sidebarManager = new SidebarManager(gameManager);
 
 
@@ -27,9 +29,13 @@ public final class WorkshopPractice extends JavaPlugin {
         }
 
         getCommand("play").setExecutor(new PlayCommand(gameManager));
-        this.getCommand("leaderboard").setExecutor(new LeaderboardCommand(gameManager.getScoreManager()));
+        getCommand("playhelp").setExecutor(new PlayHelpCommand());
+        getCommand("pregamecountdown").setExecutor(new PregameCountdownCommand(gameManager.getSettingsManager()));
+        getCommand("l").setExecutor(new LeaveCommand(gameManager));
+        this.getCommand("leaderboard").setExecutor(new LeaderboardCommand(gameManager.getStatsManager()));
         getServer().getPluginManager().registerEvents(new PlayerRestrictionListener(gameManager), this);
         getServer().getPluginManager().registerEvents(new PlayerJoinListener(this, gameManager, sidebarManager), this);
+        getServer().getPluginManager().registerEvents(new PlayerQuitListener(gameManager), this);
         getServer().getPluginManager().registerEvents(new InventoryClickListener(gameManager), this);
         getServer().getPluginManager().registerEvents(new BlockClickListener(gameManager), this);
         getServer().getPluginManager().registerEvents(new FurnaceListener(gameManager), this);
@@ -39,7 +45,10 @@ public final class WorkshopPractice extends JavaPlugin {
 
     @Override
     public void onDisable() {
-
+        if (gameManager != null) {
+            gameManager.getStatsManager().save();
+            gameManager.getSettingsManager().save();
+        }
     }
 
     public SidebarManager getSidebarManager() {

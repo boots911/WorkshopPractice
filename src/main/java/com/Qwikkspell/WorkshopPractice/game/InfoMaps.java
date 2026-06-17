@@ -364,6 +364,11 @@ public class InfoMaps {
                         Material.LAPIS_LAZULI, Material.LAPIS_LAZULI, Material.LAPIS_LAZULI,
                         Material.LAPIS_LAZULI, Material.LAPIS_LAZULI, Material.LAPIS_LAZULI
                 )),
+                Map.entry(Material.REDSTONE_BLOCK, Arrays.asList(
+                        Material.REDSTONE, Material.REDSTONE, Material.REDSTONE,
+                        Material.REDSTONE, Material.REDSTONE, Material.REDSTONE,
+                        Material.REDSTONE, Material.REDSTONE, Material.REDSTONE
+                )),
                 Map.entry(Material.WOODEN_PICKAXE, Arrays.asList(
                         Material.OAK_PLANKS, Material.OAK_PLANKS, Material.OAK_PLANKS,
                         null, Material.STICK, null,
@@ -616,6 +621,11 @@ public class InfoMaps {
                         Material.LAPIS_ORE, Material.LAPIS_ORE, Material.LAPIS_ORE,
                         Material.LAPIS_ORE, Material.LAPIS_ORE, Material.LAPIS_ORE,
                         Material.LAPIS_ORE, Material.LAPIS_ORE, Material.LAPIS_ORE // 9 lapis ores for lapis lazuli
+                )),
+                Map.entry(Material.REDSTONE_BLOCK, List.of(
+                        Material.REDSTONE_ORE, Material.REDSTONE_ORE, Material.REDSTONE_ORE,
+                        Material.REDSTONE_ORE, Material.REDSTONE_ORE, Material.REDSTONE_ORE,
+                        Material.REDSTONE_ORE, Material.REDSTONE_ORE, Material.REDSTONE_ORE // 9 redstone ores for redstone
                 )),
                 Map.entry(Material.WOODEN_PICKAXE, List.of(
                         Material.SPRUCE_LOG, Material.SPRUCE_LOG // 2 oak logs for planks and sticks

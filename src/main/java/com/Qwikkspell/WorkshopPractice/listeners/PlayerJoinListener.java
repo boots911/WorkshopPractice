@@ -28,8 +28,9 @@ public class PlayerJoinListener implements Listener {
         sidebarManager.updateSidebar(player);
         player.teleport(player.getWorld().getSpawnLocation(), PlayerTeleportEvent.TeleportCause.PLUGIN);
         player.sendMessage(ChatColor.GOLD + "Welcome to Workshop Practice " + ChatColor.AQUA + player.getName() +
-                ChatColor.GOLD + "! Use " + ChatColor.AQUA + "/play <left/right> <easy/normal> <pregame seconds>" + ChatColor.GOLD + " to play, " +
-                "and use " + ChatColor.AQUA + "/leaderboard" + ChatColor.GOLD + " to see the top players!");
+                ChatColor.GOLD + "! Use " + ChatColor.AQUA + "/play <mode> [seed <number>]" + ChatColor.GOLD + " to play, " +
+                ChatColor.AQUA + "/playhelp" + ChatColor.GOLD + " for all modes, and " + ChatColor.AQUA + "/leaderboard"
+                + ChatColor.GOLD + " to see the top players!");
         player.sendMessage(ChatColor.AQUA + "Plugin Author: Qwikkspell");
 
     }

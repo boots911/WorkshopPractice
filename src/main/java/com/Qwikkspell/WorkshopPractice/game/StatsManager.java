@@ -128,6 +128,33 @@ public class StatsManager {
         }
     }
 
+    /** UUIDs that have stats but no stored username (e.g. legacy scores.yml imports). */
+    public synchronized List<UUID> uuidsMissingNames() {
+        List<UUID> missing = new ArrayList<>();
+        for (PlayerStats ps : players.values()) {
+            if (ps.name == null || ps.name.isBlank()) {
+                missing.add(ps.uuid);
+            }
+        }
+        return missing;
+    }
+
+    /**
+     * Update a known player's stored username. Does not create new entries and does not save —
+     * the caller decides when to persist. Returns true if the name actually changed.
+     */
+    public synchronized boolean setNameIfPresent(UUID uuid, String name) {
+        if (name == null || name.isBlank()) {
+            return false;
+        }
+        PlayerStats ps = players.get(uuid);
+        if (ps == null || name.equals(ps.name)) {
+            return false;
+        }
+        ps.name = name;
+        return true;
+    }
+
     /** Track a player's fastest seeded (practice) completion time for the "best setseed" board. */
     public synchronized void recordSeededPlayerTime(OfflinePlayer player, double timeSeconds) {
         PlayerStats ps = playerStats(player);

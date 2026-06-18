@@ -235,6 +235,8 @@ public class Game {
                     + mode.getDisplayName() + "! " + ChatColor.AQUA + "(" + timeStr + ")");
             if (newPB) {
                 broadcastPersonalBest(mode.getDisplayName() + " PB", timeStr);
+                gameManager.getPbLogger().logPersonalBest(player.getName(), player.getUniqueId(), mode, seed,
+                        "time=" + timeStr, completedCrafts);
             }
         }
         sendSeedReplayMessage();
@@ -259,6 +261,8 @@ public class Game {
             player.sendMessage(ChatColor.YELLOW + "Time's up! Crafts completed: " + ChatColor.AQUA + count);
             if (newBest) {
                 broadcastPersonalBest(mode.getDisplayName() + " PB", count + " crafts");
+                gameManager.getPbLogger().logPersonalBest(player.getName(), player.getUniqueId(), mode, seed,
+                        "crafts=" + count, completedCrafts);
             }
         }
         sendSeedReplayMessage();

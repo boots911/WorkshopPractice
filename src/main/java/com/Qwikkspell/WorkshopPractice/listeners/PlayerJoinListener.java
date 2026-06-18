@@ -25,6 +25,10 @@ public class PlayerJoinListener implements Listener {
     @EventHandler
     public void onPlayerJoin(PlayerJoinEvent event) {
         Player player = event.getPlayer();
+        // Keep the stored username fresh (and fill it in for legacy UUID-only entries).
+        if (gameManager.getStatsManager().setNameIfPresent(player.getUniqueId(), player.getName())) {
+            gameManager.getStatsManager().save();
+        }
         sidebarManager.updateSidebar(player);
         player.teleport(player.getWorld().getSpawnLocation(), PlayerTeleportEvent.TeleportCause.PLUGIN);
         player.sendMessage(ChatColor.GOLD + "Welcome to Workshop Practice " + ChatColor.AQUA + player.getName() +

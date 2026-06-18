@@ -24,6 +24,7 @@ public class GameManager {
     private final ScoreManager scoreManager;
     private final StatsManager statsManager;
     private final PlayerSettingsManager settingsManager;
+    private final PbLogger pbLogger;
     private List<Material> allCraftMaterials;
     private BukkitTask furnaceCheckTask;
     private final List<String> crafts = Arrays.asList(
@@ -52,6 +53,7 @@ public class GameManager {
         // Legacy scores.yml times are all Left Easy runs — fold them into the lefteasy board.
         this.statsManager.importLegacyScores(this.scoreManager.getLegacyScores());
         this.settingsManager = new PlayerSettingsManager(plugin);
+        this.pbLogger = new PbLogger(plugin);
         buildCraftMaterials();
         loadCraftStations();
     }
@@ -338,6 +340,10 @@ public class GameManager {
     /** The ordered craft universe (used by the Discord bot's /findseed seed encoder). */
     public List<Material> getCraftUniverse() {
         return allCraftMaterials;
+    }
+
+    public PbLogger getPbLogger() {
+        return pbLogger;
     }
 
     public PlayerSettingsManager getSettingsManager() {

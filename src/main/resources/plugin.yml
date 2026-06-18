@@ -16,5 +16,5 @@ commands:
     description: Leave your current game and return to spawn (abandons the run)
     usage: /l
   leaderboard:
-    description: Show a leaderboard for a mode, an item, or the overall board
-    usage: /leaderboard <left|lefteasy|right|righteasy|allcrafts|timetrial60|overall|item <item>>
+    description: Show a leaderboard for a mode, an item, or a special board
+    usage: /leaderboard <left|lefteasy|right|righteasy|allcrafts|timetrial60|overall|setseed|totalgames|avgcraft|item <item>>

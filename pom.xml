@@ -38,6 +38,55 @@
             <goals>
               <goal>shade</goal>
             </goals>
+            <configuration>
+              <!-- Relocate bundled libraries so they never clash with other plugins
+                   that also bundle JDA/okhttp/gson (e.g. DiscordSRV). -->
+              <relocations>
+                <relocation>
+                  <pattern>net.dv8tion</pattern>
+                  <shadedPattern>com.Qwikkspell.WorkshopPractice.libs.jda</shadedPattern>
+                </relocation>
+                <relocation>
+                  <pattern>okhttp3</pattern>
+                  <shadedPattern>com.Qwikkspell.WorkshopPractice.libs.okhttp3</shadedPattern>
+                </relocation>
+                <relocation>
+                  <pattern>okio</pattern>
+                  <shadedPattern>com.Qwikkspell.WorkshopPractice.libs.okio</shadedPattern>
+                </relocation>
+                <relocation>
+                  <pattern>kotlin</pattern>
+                  <shadedPattern>com.Qwikkspell.WorkshopPractice.libs.kotlin</shadedPattern>
+                </relocation>
+                <relocation>
+                  <pattern>com.google.gson</pattern>
+                  <shadedPattern>com.Qwikkspell.WorkshopPractice.libs.gson</shadedPattern>
+                </relocation>
+                <relocation>
+                  <pattern>gnu.trove</pattern>
+                  <shadedPattern>com.Qwikkspell.WorkshopPractice.libs.trove</shadedPattern>
+                </relocation>
+                <relocation>
+                  <pattern>org.json</pattern>
+                  <shadedPattern>com.Qwikkspell.WorkshopPractice.libs.json</shadedPattern>
+                </relocation>
+                <relocation>
+                  <pattern>com.neovisionaries</pattern>
+                  <shadedPattern>com.Qwikkspell.WorkshopPractice.libs.neovisionaries</shadedPattern>
+                </relocation>
+              </relocations>
+              <filters>
+                <filter>
+                  <artifact>*:*</artifact>
+                  <excludes>
+                    <exclude>META-INF/*.SF</exclude>
+                    <exclude>META-INF/*.DSA</exclude>
+                    <exclude>META-INF/*.RSA</exclude>
+                    <exclude>module-info.class</exclude>
+                  </excludes>
+                </filter>
+              </filters>
+            </configuration>
           </execution>
         </executions>
       </plugin>
@@ -67,6 +116,18 @@
       <artifactId>spigot-api</artifactId>
       <version>1.20.1-R0.1-SNAPSHOT</version>
       <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>net.dv8tion</groupId>
+      <artifactId>JDA</artifactId>
+      <version>5.6.1</version>
+      <exclusions>
+        <!-- We don't use voice, so drop the native audio library to keep the jar smaller. -->
+        <exclusion>
+          <groupId>club.minnced</groupId>
+          <artifactId>opus-java</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
   </dependencies>
 </project>

@@ -43,10 +43,24 @@ public class LeaderboardCommand implements CommandExecutor {
             return true;
         }
 
+        if (key.equals("setseed")) {
+            renderSimple(sender, "Best Seeded Times", statsManager.getSeededLeaderboard(LIMIT));
+            return true;
+        }
+        if (key.equals("totalgames")) {
+            renderGames(sender, "Most Games Completed", statsManager.getTotalGamesLeaderboard(LIMIT));
+            return true;
+        }
+        if (key.equals("avgcraft")) {
+            renderSimple(sender, "Fastest Average Craft", statsManager.getAvgCraftLeaderboard(LIMIT));
+            return true;
+        }
+
         Optional<GameMode> modeOpt = GameMode.fromAlias(key);
         if (modeOpt.isEmpty()) {
             sender.sendMessage(ChatColor.RED + "Unknown leaderboard '" + key + "'.");
-            sender.sendMessage(ChatColor.YELLOW + "Try: left, lefteasy, right, righteasy, allcrafts, timetrial60, overall, item <item>");
+            sender.sendMessage(ChatColor.YELLOW + "Try: left, lefteasy, right, righteasy, allcrafts, timetrial60, overall,"
+                    + " setseed, totalgames, avgcraft, item <item>");
             return true;
         }
 
@@ -71,15 +85,40 @@ public class LeaderboardCommand implements CommandExecutor {
     private void showOverall(CommandSender sender) {
         List<StatsManager.LeaderboardEntry> top = statsManager.getOverallLeaderboard(LIMIT);
         sender.sendMessage(ChatColor.GOLD + "" + ChatColor.BOLD + "Overall Leaderboard "
-                + ChatColor.GRAY + "(sum of left, lefteasy, right, righteasy PBs):");
+                + ChatColor.GRAY + "(your fastest core-mode time):");
+        renderRows(sender, top, true);
+    }
+
+    /** Render a time-based board (seeded / avg-craft / overall) with a title. */
+    private void renderSimple(CommandSender sender, String title, List<StatsManager.LeaderboardEntry> top) {
+        sender.sendMessage(ChatColor.GOLD + "" + ChatColor.BOLD + title + ":");
+        renderRows(sender, top, true);
+    }
+
+    /** Render a games-count board (integer values labelled "games"). */
+    private void renderGames(CommandSender sender, String title, List<StatsManager.LeaderboardEntry> top) {
+        sender.sendMessage(ChatColor.GOLD + "" + ChatColor.BOLD + title + ":");
         if (top.isEmpty()) {
-            sender.sendMessage(ChatColor.GRAY + "No players have a PB in all four base modes yet.");
+            sender.sendMessage(ChatColor.GRAY + "No records yet.");
             return;
         }
         int rank = 1;
         for (StatsManager.LeaderboardEntry entry : top) {
             sender.sendMessage(ChatColor.AQUA + "" + rank + ". " + nameOf(entry) + ": "
-                    + ChatColor.YELLOW + statsManager.formatTime(entry.value));
+                    + ChatColor.YELLOW + (long) entry.value + " games");
+            rank++;
+        }
+    }
+
+    private void renderRows(CommandSender sender, List<StatsManager.LeaderboardEntry> top, boolean timeBased) {
+        if (top.isEmpty()) {
+            sender.sendMessage(ChatColor.GRAY + "No records yet.");
+            return;
+        }
+        int rank = 1;
+        for (StatsManager.LeaderboardEntry entry : top) {
+            String value = timeBased ? statsManager.formatTime(entry.value) : ((int) entry.value) + " crafts";
+            sender.sendMessage(ChatColor.AQUA + "" + rank + ". " + nameOf(entry) + ": " + ChatColor.YELLOW + value);
             rank++;
         }
     }

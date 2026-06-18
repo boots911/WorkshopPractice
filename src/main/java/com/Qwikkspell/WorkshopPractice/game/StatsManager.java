@@ -128,6 +128,15 @@ public class StatsManager {
         }
     }
 
+    /** Track a player's fastest seeded (practice) completion time for the "best setseed" board. */
+    public synchronized void recordSeededPlayerTime(OfflinePlayer player, double timeSeconds) {
+        PlayerStats ps = playerStats(player);
+        if (ps.bestSeededTime < 0 || timeSeconds < ps.bestSeededTime) {
+            ps.bestSeededTime = timeSeconds;
+            save();
+        }
+    }
+
     // ---------------------------------------------------------------- queries
 
     /** Personal best for a mode: best time (FASTEST_TIME) or best count (MOST_CRAFTS); -1 if none. */
@@ -191,6 +200,55 @@ public class StatsManager {
                 continue;
             }
             entries.add(new LeaderboardEntry(ps.uuid, ps.name, is.bestTime));
+        }
+        entries.sort(Comparator.comparingDouble(e -> e.value));
+        return entries.subList(0, Math.min(limit, entries.size()));
+    }
+
+    /** Best seeded (practice) completion time per player, fastest first. */
+    public List<LeaderboardEntry> getSeededLeaderboard(int limit) {
+        List<LeaderboardEntry> entries = new ArrayList<>();
+        for (PlayerStats ps : players.values()) {
+            if (ps.bestSeededTime < 0) {
+                continue;
+            }
+            entries.add(new LeaderboardEntry(ps.uuid, ps.name, ps.bestSeededTime));
+        }
+        entries.sort(Comparator.comparingDouble(e -> e.value));
+        return entries.subList(0, Math.min(limit, entries.size()));
+    }
+
+    /** Total games completed across all modes per player, most first. */
+    public List<LeaderboardEntry> getTotalGamesLeaderboard(int limit) {
+        List<LeaderboardEntry> entries = new ArrayList<>();
+        for (PlayerStats ps : players.values()) {
+            long total = 0;
+            for (ModeStats ms : ps.modes.values()) {
+                total += ms.gamesPlayed;
+            }
+            if (total <= 0) {
+                continue;
+            }
+            entries.add(new LeaderboardEntry(ps.uuid, ps.name, total));
+        }
+        entries.sort(Comparator.comparingDouble((LeaderboardEntry e) -> e.value).reversed());
+        return entries.subList(0, Math.min(limit, entries.size()));
+    }
+
+    /** Average time per craft across all items per player, fastest first. */
+    public List<LeaderboardEntry> getAvgCraftLeaderboard(int limit) {
+        List<LeaderboardEntry> entries = new ArrayList<>();
+        for (PlayerStats ps : players.values()) {
+            double totalTime = 0;
+            long count = 0;
+            for (ItemStats is : ps.items.values()) {
+                totalTime += is.totalTime;
+                count += is.timesCrafted;
+            }
+            if (count <= 0) {
+                continue;
+            }
+            entries.add(new LeaderboardEntry(ps.uuid, ps.name, totalTime / count));
         }
         entries.sort(Comparator.comparingDouble(e -> e.value));
         return entries.subList(0, Math.min(limit, entries.size()));
@@ -261,6 +319,7 @@ public class StatsManager {
             }
             PlayerStats ps = new PlayerStats(uuid);
             ps.name = cfg.getString(key + ".name");
+            ps.bestSeededTime = cfg.getDouble(key + ".bestSeededTime", -1);
 
             ConfigurationSection modes = cfg.getConfigurationSection(key + ".modes");
             if (modes != null) {
@@ -335,6 +394,9 @@ public class StatsManager {
             String key = ps.uuid.toString();
             if (ps.name != null) {
                 cfg.set(key + ".name", ps.name);
+            }
+            if (ps.bestSeededTime >= 0) {
+                cfg.set(key + ".bestSeededTime", ps.bestSeededTime);
             }
             for (Map.Entry<String, ModeStats> e : ps.modes.entrySet()) {
                 ModeStats ms = e.getValue();
@@ -418,6 +480,7 @@ public class StatsManager {
     private static final class PlayerStats {
         final UUID uuid;
         String name;
+        double bestSeededTime = -1; // fastest seeded (practice) run; -1 = unset
         final Map<String, ModeStats> modes = new HashMap<>();
         final Map<Material, ItemStats> items = new HashMap<>();
 

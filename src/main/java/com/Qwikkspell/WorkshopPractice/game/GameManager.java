@@ -75,7 +75,7 @@ public class GameManager {
             existing.end();
         }
 
-        long actualSeed = (seed != null) ? seed : CraftSequence.randomSeed();
+        long actualSeed = (seed != null) ? seed : CraftSequence.randomSeed(allCraftMaterials, mode);
         boolean isSeeded = seed != null;
 
         CraftStation station = mode.isAnyDirection()
@@ -333,6 +333,11 @@ public class GameManager {
 
     public StatsManager getStatsManager() {
         return statsManager;
+    }
+
+    /** The ordered craft universe (used by the Discord bot's /findseed seed encoder). */
+    public List<Material> getCraftUniverse() {
+        return allCraftMaterials;
     }
 
     public PlayerSettingsManager getSettingsManager() {

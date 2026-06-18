@@ -7,3 +7,16 @@ anchor:
 # Default pre-game countdown (seconds) for players who haven't set their own
 # with /pregamecountdown. Clamped to 0-10.
 defaultPregameCountdown: 6
+
+# Discord bot (embedded). Leave enabled false to run without it.
+# Fill these in on the SERVER only - do not commit real values to a public repo.
+discord:
+  enabled: false
+  # Bot token from https://discord.com/developers (Bot tab -> Reset Token).
+  token: ""
+  # Your Discord server (guild) ID. Enable Developer Mode in Discord, right-click
+  # the server icon -> Copy Server ID. Slash commands register instantly to this guild.
+  guildId: ""
+  # Channel ID where new personal-best announcements are posted.
+  # Right-click the channel -> Copy Channel ID.
+  pbChannelId: ""

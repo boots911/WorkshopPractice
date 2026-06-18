@@ -225,6 +225,7 @@ public class Game {
 
         if (seeded) {
             stats.recordSeedResult(mode, seed, player, gameTime);
+            stats.recordSeededPlayerTime(player, gameTime);
             player.sendMessage(ChatColor.GOLD + "" + ChatColor.BOLD + "Practice / Seeded Run "
                     + ChatColor.GRAY + "(" + mode.getDisplayName() + ", seed " + seed + ")");
             player.sendMessage(ChatColor.YELLOW + "Completed in " + ChatColor.AQUA + timeStr);
@@ -270,6 +271,10 @@ public class Game {
         Bukkit.broadcastMessage(message);
         for (Player onlinePlayer : Bukkit.getOnlinePlayers()) {
             onlinePlayer.playSound(onlinePlayer.getLocation(), Sound.ENTITY_FIREWORK_ROCKET_LAUNCH, 1.0f, 1.0f);
+        }
+        com.Qwikkspell.WorkshopPractice.discord.DiscordManager discord = plugin.getDiscordManager();
+        if (discord != null) {
+            discord.announcePersonalBest(player.getName(), mode.getDisplayName(), value);
         }
     }
 

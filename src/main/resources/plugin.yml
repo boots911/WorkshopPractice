@@ -5,7 +5,7 @@ api-version: '1.20'
 commands:
   play:
     description: Start a Workshop Practice run
-    usage: /play <left|lefteasy|right|righteasy|allcrafts|timetrial60> [seed <number>]
+    usage: /play <left|lefteasy|right|righteasy|timetrial60> OR /play allcrafts [left|lefteasy|right|righteasy] [seed <number>]
   playhelp:
     description: List all play commands, modes and seed syntax
     usage: /playhelp
@@ -15,9 +15,6 @@ commands:
   l:
     description: Leave your current game and return to spawn (abandons the run)
     usage: /l
-  wpnames:
-    description: One-time backfill of missing usernames from Mojang (op only)
-    usage: /wpnames
   leaderboard:
     description: Show a leaderboard for a mode, an item, or a special board
-    usage: /leaderboard <left|lefteasy|right|righteasy|allcrafts|timetrial60|overall|setseed|totalgames|avgcraft|item <item>>
+    usage: /leaderboard <left|lefteasy|right|righteasy|allcraftsleft|allcraftslefteasy|allcraftsright|allcraftsrighteasy|timetrial60|overall|setseed|totalgames|avgcraft|item <item>>

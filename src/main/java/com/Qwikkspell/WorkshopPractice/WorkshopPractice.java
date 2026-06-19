@@ -1,6 +1,5 @@
 package com.Qwikkspell.WorkshopPractice;
 
-import com.Qwikkspell.WorkshopPractice.commands.BackfillNamesCommand;
 import com.Qwikkspell.WorkshopPractice.commands.LeaderboardCommand;
 import com.Qwikkspell.WorkshopPractice.commands.LeaveCommand;
 import com.Qwikkspell.WorkshopPractice.commands.PlayCommand;
@@ -39,7 +38,6 @@ public final class WorkshopPractice extends JavaPlugin {
         getCommand("playhelp").setExecutor(new PlayHelpCommand());
         getCommand("pregamecountdown").setExecutor(new PregameCountdownCommand(gameManager.getSettingsManager()));
         getCommand("l").setExecutor(new LeaveCommand(gameManager));
-        getCommand("wpnames").setExecutor(new BackfillNamesCommand(this, gameManager.getStatsManager()));
         this.getCommand("leaderboard").setExecutor(new LeaderboardCommand(gameManager.getStatsManager()));
         getServer().getPluginManager().registerEvents(new PlayerRestrictionListener(gameManager), this);
         getServer().getPluginManager().registerEvents(new PlayerJoinListener(this, gameManager, sidebarManager), this);

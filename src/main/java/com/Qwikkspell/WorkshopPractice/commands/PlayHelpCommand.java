@@ -15,7 +15,8 @@ public class PlayHelpCommand implements CommandExecutor {
         sender.sendMessage(ChatColor.YELLOW + "/play lefteasy" + ChatColor.GRAY + " - 5 crafts, easy (left side)");
         sender.sendMessage(ChatColor.YELLOW + "/play right" + ChatColor.GRAY + " - 5 crafts, normal (right side)");
         sender.sendMessage(ChatColor.YELLOW + "/play righteasy" + ChatColor.GRAY + " - 5 crafts, easy (right side)");
-        sender.sendMessage(ChatColor.YELLOW + "/play allcrafts" + ChatColor.GRAY + " - craft every item once, no time limit");
+        sender.sendMessage(ChatColor.YELLOW + "/play allcrafts [left|lefteasy|right|righteasy]" + ChatColor.GRAY
+                + " - craft every item once, no time limit (defaults to left easy)");
         sender.sendMessage(ChatColor.YELLOW + "/play timetrial60" + ChatColor.GRAY + " - most crafts you can do in 60 seconds");
         sender.sendMessage(ChatColor.GOLD + "Seeded (practice) runs:");
         sender.sendMessage(ChatColor.YELLOW + "/play <mode> seed <number>" + ChatColor.GRAY + " - replay an exact run");

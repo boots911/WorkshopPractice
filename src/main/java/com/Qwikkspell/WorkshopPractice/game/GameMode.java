@@ -18,7 +18,10 @@ public enum GameMode {
     // -1 / -2 below are the CRAFT_COUNT_ALL / CRAFT_COUNT_ENDLESS sentinels; they are written as
     // literals here because enum constants are initialized before static fields (a named reference
     // would be an illegal forward reference).
-    ALL_CRAFTS ("allcrafts",   "All Crafts",    Direction.ANY,   "normal", -1,  0L, ScoringType.FASTEST_TIME, false),
+    ALL_CRAFTS_LEFT      ("allcraftsleft",      "All Crafts (Left)",       Direction.NORTH, "normal", -1, 0L, ScoringType.FASTEST_TIME, false),
+    ALL_CRAFTS_LEFT_EASY ("allcraftslefteasy",  "All Crafts (Left Easy)",  Direction.NORTH, "easy",   -1, 0L, ScoringType.FASTEST_TIME, false),
+    ALL_CRAFTS_RIGHT     ("allcraftsright",     "All Crafts (Right)",      Direction.SOUTH, "normal", -1, 0L, ScoringType.FASTEST_TIME, false),
+    ALL_CRAFTS_RIGHT_EASY("allcraftsrighteasy", "All Crafts (Right Easy)", Direction.SOUTH, "easy",   -1, 0L, ScoringType.FASTEST_TIME, false),
     TIME_TRIAL_60("timetrial60", "Time Trial 60s", Direction.ANY, "normal", -2, 60L, ScoringType.MOST_CRAFTS, false);
 
     /** Sentinel craft counts. */
@@ -82,12 +85,31 @@ public enum GameMode {
     public static Optional<GameMode> fromAlias(String alias) {
         if (alias == null) return Optional.empty();
         String key = alias.toLowerCase();
+        // Bare "allcrafts" defaults to the most popular variant (left easy).
+        if (key.equals("allcrafts")) {
+            return Optional.of(ALL_CRAFTS_LEFT_EASY);
+        }
         for (GameMode mode : values()) {
             if (mode.alias.equals(key)) {
                 return Optional.of(mode);
             }
         }
         return Optional.empty();
+    }
+
+    /**
+     * Resolve an All Crafts variant. A null/blank variant defaults to left easy (the most popular).
+     * Returns null for an unrecognised variant.
+     */
+    public static GameMode allCrafts(String variant) {
+        String v = (variant == null || variant.isBlank()) ? "lefteasy" : variant.toLowerCase();
+        switch (v) {
+            case "left":      return ALL_CRAFTS_LEFT;
+            case "lefteasy":  return ALL_CRAFTS_LEFT_EASY;
+            case "right":     return ALL_CRAFTS_RIGHT;
+            case "righteasy": return ALL_CRAFTS_RIGHT_EASY;
+            default:          return null;
+        }
     }
 
     /** The four modes that feed the overall leaderboard, in display order. */

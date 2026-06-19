@@ -59,8 +59,10 @@ public class LeaderboardCommand implements CommandExecutor {
         Optional<GameMode> modeOpt = GameMode.fromAlias(key);
         if (modeOpt.isEmpty()) {
             sender.sendMessage(ChatColor.RED + "Unknown leaderboard '" + key + "'.");
-            sender.sendMessage(ChatColor.YELLOW + "Try: left, lefteasy, right, righteasy, allcrafts, timetrial60, overall,"
+            sender.sendMessage(ChatColor.YELLOW + "Try: left, lefteasy, right, righteasy, timetrial60, overall,"
                     + " setseed, totalgames, avgcraft, item <item>");
+            sender.sendMessage(ChatColor.YELLOW + "All Crafts boards: " + ChatColor.GOLD
+                    + "allcraftsleft, allcraftslefteasy, allcraftsright, allcraftsrighteasy");
             return true;
         }
 

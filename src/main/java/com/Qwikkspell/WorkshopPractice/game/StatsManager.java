@@ -128,17 +128,6 @@ public class StatsManager {
         }
     }
 
-    /** UUIDs that have stats but no stored username (e.g. legacy scores.yml imports). */
-    public synchronized List<UUID> uuidsMissingNames() {
-        List<UUID> missing = new ArrayList<>();
-        for (PlayerStats ps : players.values()) {
-            if (ps.name == null || ps.name.isBlank()) {
-                missing.add(ps.uuid);
-            }
-        }
-        return missing;
-    }
-
     /**
      * Update a known player's stored username. Does not create new entries and does not save —
      * the caller decides when to persist. Returns true if the name actually changed.
@@ -351,7 +340,9 @@ public class StatsManager {
             ConfigurationSection modes = cfg.getConfigurationSection(key + ".modes");
             if (modes != null) {
                 for (String modeKey : modes.getKeys(false)) {
-                    ModeStats ms = ps.mode(modeKey);
+                    // Migrate the old single "allcrafts" board into the new default (left easy) variant.
+                    String effectiveKey = modeKey.equals("allcrafts") ? "allcraftslefteasy" : modeKey;
+                    ModeStats ms = ps.mode(effectiveKey);
                     String base = key + ".modes." + modeKey;
                     ms.gamesPlayed = cfg.getInt(base + ".gamesPlayed");
                     ms.bestTime = cfg.getDouble(base + ".bestTime", -1);
